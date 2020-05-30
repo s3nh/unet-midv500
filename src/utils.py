@@ -2,10 +2,10 @@ import numpy as np
 import os 
 import re 
 import sys 
+import cv2
 
 
-
-def pad(image: np.array, factor: int = 32, border: int = cv2.BORDER_REFLEXT_101) -> tuple:
+def pad(image: np.array, factor: int = 32, border: int = cv2.BORDER_REFLECT_101) -> tuple:
     """
     Pad image so it is divided by factor
     """
@@ -40,3 +40,5 @@ def unpad(image: np.array, pads: list) -> np.array:
     height, width = image.shape[:2]
 
     return image[y_min_pad : height -  y_max_pad, x_min_pad : width - x_max_pad]
+
+

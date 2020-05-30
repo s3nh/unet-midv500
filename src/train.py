@@ -1,11 +1,15 @@
 from models.unet import UNet
+from src.dataset import MidvDataset
+
+
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
 ## TODO: Add helpers and metrics 
+## TODO: compress to pytorch lightning
 
 def train_model(model, optimizer, scheduler, num_epochs):
-    for epoch in rane(num_epochs):
+    for epoch in range(num_epochs):
         since = time.time()
         for phase in ['train', 'val']:
             if phase == 'train':
@@ -27,10 +31,8 @@ def train_model(model, optimizer, scheduler, num_epochs):
             with torch.set_grad_enabled(phase == 'train'):
                 outputs = model(inputs)
                 loss = calc_loss(ouput, labels, metrics)
-
-                if phase == 'train':
-                    loss.backward()
-                    optimizer.step()
+                loss.backward()
+                optimizer.step()
             epoch_samples += inputs.size(0)
 
         epoch_loss = metrics['loss'] / epoch_samples
