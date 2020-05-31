@@ -32,6 +32,6 @@ class FocalLoss(nn.Module):
         target = target.view(-1, 1)
 
         logpt = F.log_softmax(input).gather(1, target).view(-1)
-
+    
 
 

@@ -1,3 +1,8 @@
+import time 
+import torch
+import numpy as np 
+from pathlib import Path
+#import time.time
 import cv2
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, datasets, models 
@@ -12,6 +17,10 @@ class MidvDataset(Dataset):
         self.samples = samples 
         self.transform = transform 
 
+
+    def __len__(self):
+        return len(self.samples)
+
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         image_path, mask_path = self.samples[idx]
         image = cv2.imread(image_path)
@@ -25,7 +34,9 @@ class MidvDataset(Dataset):
         mask = torch.from_numpy(mask)
 
         return {
-            "image_id" : image_path.stem, 
+            "image_id" : Path(image_path).stem, 
             "features" : tensor_from_rgb_image(image), 
             "masks" : torch.unsqueeze(mask, 0).float(),
         }
+
+
