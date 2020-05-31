@@ -1,3 +1,6 @@
+import torch
+import numpy as np 
+from pathlib import Path
 import cv2
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, datasets, models 
@@ -25,7 +28,7 @@ class MidvDataset(Dataset):
         mask = torch.from_numpy(mask)
 
         return {
-            "image_id" : image_path.stem, 
+            "image_id" : Path(image_path).stem, 
             "features" : tensor_from_rgb_image(image), 
             "masks" : torch.unsqueeze(mask, 0).float(),
         }
