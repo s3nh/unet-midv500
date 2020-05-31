@@ -1,6 +1,8 @@
+import time 
 import torch
 import numpy as np 
 from pathlib import Path
+#import time.time
 import cv2
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, datasets, models 
@@ -14,6 +16,10 @@ class MidvDataset(Dataset):
     def __init__(self, samples: List[Tuple[Path, Path]], transform = albumentations.Compose) -> None:
         self.samples = samples 
         self.transform = transform 
+
+
+    def __len__(self):
+        return len(self.samples)
 
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         image_path, mask_path = self.samples[idx]
@@ -32,3 +38,5 @@ class MidvDataset(Dataset):
             "features" : tensor_from_rgb_image(image), 
             "masks" : torch.unsqueeze(mask, 0).float(),
         }
+
+
