@@ -10,33 +10,41 @@ from src.dataset import MidvDataset
 from pathlib import Path 
 from models.loss import dice_loss
 from torchsummary import summary 
+from pytorch_toolbelt.losses import JaccardLoss, BinaryFocalLoss
+import os 
 
 
+
+
+os.makedirs('trained_model', exist_ok = True)
 
 device = 'cuda'
 
 def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
-    dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=768 , p=1)], p=1  ))
-    dataloader = DataLoader(dataset,  batch_size = 1, shuffle = True, num_workers = 0)
+    dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=512 , p=1)], p=1  ))
+    dataloader = DataLoader(dataset,  batch_size = 4, shuffle = True, num_workers = 0)
     model = model.cuda()
+    criterion = JaccardLoss(mode="binary", from_logits=True) 
+
     for epoch in range(num_epochs):
-        #since = time.time()
         model.train()
 
-        #metrics = defaultdict(float)
-        for res in dataloader:
+        for i,  res in enumerate(dataloader, 0):
             inputs = res['features'].float().cuda()
-            
-            labels = res['masks'].float().cuda()
+            labels = res['masks'].cuda()
             optimizer.zero_grad()
 
             output = model(inputs)
-            loss = dice_loss(output, labels, smooth = 0.01)
+            loss = criterion(output, labels)
             loss.backward()
             optimizer.step()
+            if i % 100 == 0:
+                print(f' loss values in epoch {epoch} iter {i} : {loss}')
         print(f" Loss functions after {epoch} : {loss}")
-        torch.save(model.state_dict(), f'model_state_dict_{epoch}.pt')
+        save_path = os.path.join('trained_model', f'unet_midv_{epoch}.pt')
+        torch.save(model.state_dict(), save_path)
         
+
         # Saving general checkpoint 
     #model.load_state_dict(best_model_wts)
     return model 
@@ -57,8 +65,8 @@ def main():
     list_images = [str(el) for el in list_images]
     samples = list(zip(list_masks, list_images))
     samples = [tuple(el) for el in samples]
-    optimizer = Adam(model.parameters(), lr = 0.001)
-    train_model(model = model, optimizer = optimizer, scheduler = None, num_epochs = 100, samples = samples)
+    optimizer = torch.optim.SGD(model.parameters(), lr = 0.0001, momentum = 0.99)
+    train_model(model = model, optimizer = optimizer, scheduler = None, num_epochs = 10, samples = samples)
 
 if __name__ == "__main__":
     main()
