@@ -25,12 +25,11 @@ class MidvDataset(Dataset):
         image_path, mask_path = self.samples[idx]
         image = cv2.imread(image_path)
         mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
-
-        #Augmentations 
         sample = self.transform(image = image, mask = mask)
         image, mask = sample["image"], sample["mask"]
 
-        mask = (mask > 0).astype(np.uint8)
+        #mask = (mask > 0).astype(np.uint8)
+
         mask = torch.from_numpy(mask)
 
         return {

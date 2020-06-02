@@ -31,9 +31,9 @@ def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
 
         for i,  res in enumerate(dataloader, 0):
             inputs = res['features'].float().cuda()
-            labels = res['masks'].cuda()
+            labels = res['masks'].int().cuda()
+            print("MIN {}".format(labels.min()))
             optimizer.zero_grad()
-
             output = model(inputs)
             loss = criterion(output, labels)
             loss.backward()
@@ -63,7 +63,7 @@ def main():
     list_masks = list(Path('data_processed/labels').rglob('*.png'))
     list_masks = [str(el) for el in list_masks]
     list_images = [str(el) for el in list_images]
-    samples = list(zip(list_masks, list_images))
+    samples = list(zip(list_images, list_masks))
     samples = [tuple(el) for el in samples]
     optimizer = torch.optim.SGD(model.parameters(), lr = 0.0001, momentum = 0.99)
     train_model(model = model, optimizer = optimizer, scheduler = None, num_epochs = 10, samples = samples)
