@@ -1,39 +1,46 @@
 from models.unet import UNet
 from src.dataset import MidvDataset
-
-import time
-import torch 
-import torch.nn as nn
+import torch.nn as nn 
+import albumentations
+import torch
 import torch.nn.functional as F
+import typing
+from torch.optim.lr_scheduler import StepLR
+from torch.utils.data import DataLoader
+from torch.optim import Adam
+from models.unet import UNet
+from src.dataset import MidvDataset
+from pathlib import Path 
 from models.loss import dice_loss
+from torchsummary import summary 
+from pytorch_toolbelt.losses import JaccardLoss, BinaryFocalLoss
+import os 
+import time
 
 
-## TODO: Add helpers and metrics 
-## TODO: compress to pytorch lightning
 
 def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
-    dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=128, p=1)], p=1  ))
-
-    dataloader = DataLoader(dataset,  batch_size = 1, shuffle = True, num_workers = 0)
-
+    dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=512 , p=1)], p=1  ))
+    train_dt, test_dt = torch.utils.data.random_split(dataset,[ int(0.8* len(dataset)), int(0.2* len(dataset))])
+    train_loader = DataLoader(train_dt,  batch_size = 4, shuffle = True, num_workers = 0)
+    test_loader = DataLoader(test_dt, shuffle = True, batch_size = 4)
     model = model.cuda()
+    criterion = JaccardLoss(mode="binary", from_logits=True) 
+    
+    model.train()
     for epoch in range(num_epochs):
-        #since = time.time()
-        model.train()
-
-        #metrics = defaultdict(float)
-        for res in dataloader:
+        for i,  res in enumerate(train_loader, 0):
             inputs = res['features'].float().cuda()
-            print(inputs.shape)
-            labels = res['masks'].float().cuda()
-            print(labels.shape)
+            labels = res['masks'].long().cuda()
             optimizer.zero_grad()
-
             output = model(inputs)
-            loss = dice_loss(output, labels)
+            loss = criterion(output, labels)
             loss.backward()
             optimizer.step()
-
-
-    #model.load_state_dict(best_model_wts)
+            if i % 100 == 0:
+                print(f' loss values in epoch {epoch} iter {i} : {loss}')
+        print(f" Loss functions after {epoch} : {loss}")
+        save_path = os.path.join('trained_model', f'unet_midv_{epoch}.pt')
+        torch.save(model.state_dict(), save_path)
     return model 
+

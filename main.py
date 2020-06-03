@@ -3,10 +3,12 @@ import albumentations
 import torch
 import torch.nn.functional as F
 import typing
+from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from torch.optim import Adam
 from models.unet import UNet
 from src.dataset import MidvDataset
+from src.train import train_model
 from pathlib import Path 
 from models.loss import dice_loss
 from torchsummary import summary 
@@ -17,33 +19,6 @@ import os
 os.makedirs('trained_model', exist_ok = True)
 
 
-def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
-    dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=512 , p=1)], p=1  ))
-    train_dt, test_dt = torch.utils.data.random_split(dataset,[ int(0.8* len(dataset)), int(0.2* len(dataset))])
-    train_loader = DataLoader(train_dt,  batch_size = 4, shuffle = True, num_workers = 0)
-    test_loader = DataLoader(test_dt, shuffle = True, batch_size = 4)
-    model = model.cuda()
-    criterion = JaccardLoss(mode="binary", from_logits=True) 
-    
-    model.train()
-    for epoch in range(num_epochs):
-        for i,  res in enumerate(train_loader, 0):
-            inputs = res['features'].float().cuda()
-            labels = res['masks'].long().cuda()
-            optimizer.zero_grad()
-            output = model(inputs)
-            loss = criterion(output, labels)
-            loss.backward()
-            optimizer.step()
-            if i % 100 == 0:
-                print(f' loss values in epoch {epoch} iter {i} : {loss}')
-        print(f" Loss functions after {epoch} : {loss}")
-        save_path = os.path.join('trained_model', f'unet_midv_{epoch}.pt')
-        torch.save(model.state_dict(), save_path)
-
-    return model 
-
-
 def main():
     torch.cuda.empty_cache()
 
@@ -51,15 +26,15 @@ def main():
     model = UNet(n_class = 1)
     model = model.cuda()
    
-
     list_images = list(Path('data_processed/images').rglob('*.jpg'))
     list_masks = list(Path('data_processed/labels').rglob('*.png'))
     list_masks = [str(el) for el in list_masks]
     list_images = [str(el) for el in list_images]
     samples = list(zip(list_images, list_masks))
     samples = [tuple(el) for el in samples]
-    optimizer = torch.optim.RMSprop(model.parameters(), lr = 1e-8, momentum = 0.9)
-    train_model(model = model, optimizer = optimizer, scheduler = None, num_epochs = 10, samples = samples)
+    optimizer = torch.optim.RMSprop(model.parameters(), lr = 1e-4, momentum = 0.9)
+    scheduler = StepLR(optimizer, step_size = 30, gamma = 0.1) 
+    train_model(model = model, optimizer = optimizer, scheduler = None, num_epochs = 25, samples = samples)
 
 if __name__ == "__main__":
     main()
