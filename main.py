@@ -14,25 +14,22 @@ from pytorch_toolbelt.losses import JaccardLoss, BinaryFocalLoss
 import os 
 
 
-
-
 os.makedirs('trained_model', exist_ok = True)
 
-device = 'cuda'
 
 def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
     dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=512 , p=1)], p=1  ))
-    dataloader = DataLoader(dataset,  batch_size = 4, shuffle = True, num_workers = 0)
+    train_dt, test_dt = torch.utils.data.random_split(dataset,[ int(0.8* len(dataset)), int(0.2* len(dataset))])
+    train_loader = DataLoader(train_dt,  batch_size = 4, shuffle = True, num_workers = 0)
+    test_loader = DataLoader(test_dt, shuffle = True, batch_size = 4)
     model = model.cuda()
     criterion = JaccardLoss(mode="binary", from_logits=True) 
-
+    
+    model.train()
     for epoch in range(num_epochs):
-        model.train()
-
-        for i,  res in enumerate(dataloader, 0):
+        for i,  res in enumerate(train_loader, 0):
             inputs = res['features'].float().cuda()
-            labels = res['masks'].int().cuda()
-            print("MIN {}".format(labels.min()))
+            labels = res['masks'].long().cuda()
             optimizer.zero_grad()
             output = model(inputs)
             loss = criterion(output, labels)
@@ -43,10 +40,7 @@ def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
         print(f" Loss functions after {epoch} : {loss}")
         save_path = os.path.join('trained_model', f'unet_midv_{epoch}.pt')
         torch.save(model.state_dict(), save_path)
-        
 
-        # Saving general checkpoint 
-    #model.load_state_dict(best_model_wts)
     return model 
 
 
@@ -57,7 +51,6 @@ def main():
     model = UNet(n_class = 1)
     model = model.cuda()
    
-    #summary(model, input_size = (3, 764, 764))
 
     list_images = list(Path('data_processed/images').rglob('*.jpg'))
     list_masks = list(Path('data_processed/labels').rglob('*.png'))
@@ -65,7 +58,7 @@ def main():
     list_images = [str(el) for el in list_images]
     samples = list(zip(list_images, list_masks))
     samples = [tuple(el) for el in samples]
-    optimizer = torch.optim.SGD(model.parameters(), lr = 0.0001, momentum = 0.99)
+    optimizer = torch.optim.RMSprop(model.parameters(), lr = 1e-8, momentum = 0.9)
     train_model(model = model, optimizer = optimizer, scheduler = None, num_epochs = 10, samples = samples)
 
 if __name__ == "__main__":

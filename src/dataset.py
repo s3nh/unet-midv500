@@ -28,7 +28,7 @@ class MidvDataset(Dataset):
         sample = self.transform(image = image, mask = mask)
         image, mask = sample["image"], sample["mask"]
 
-        #mask = (mask > 0).astype(np.uint8)
+        mask = (mask > 0).astype(np.uint8)
 
         mask = torch.from_numpy(mask)
 
