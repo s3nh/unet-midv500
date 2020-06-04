@@ -18,7 +18,6 @@ import os
 import time
 
 
-
 def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
     dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=512 , p=1)], p=1  ))
     train_dt, test_dt = torch.utils.data.random_split(dataset,[ int(0.8* len(dataset)), int(0.2* len(dataset))])
@@ -40,7 +39,8 @@ def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
             if i % 100 == 0:
                 print(f' loss values in epoch {epoch} iter {i} : {loss}')
         print(f" Loss functions after {epoch} : {loss}")
-        save_path = os.path.join('trained_model', f'unet_midv_{epoch}.pt')
-        torch.save(model.state_dict(), save_path)
+        if epoch % 5 == 0:
+            save_path = os.path.join('trained_model', f'unet_midv_adam_{epoch}.pt') 
+            torch.save(model.state_dict(), save_path)
     return model 
 
