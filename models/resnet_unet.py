@@ -62,10 +62,14 @@ class UNetResnet(nn.Module):
         self.down_blocks = nn.ModuleList(down_blocks)
         self.dconv = DConv(2048, 2048)
         
-        
         up_blocks.append(UpBlock(2048, 1024))
         up_blocks.append(UpBlock(1024, 512))
         up_blocks.append(UpBlock(512 ,256))
         up_blocks.append(UpBlock(in_channels = 128 + 64, out_channels = 128))
         up_blocks.append(UpBlock(in_channels = 64 + 3, out_channels = 64))
+        
+        self.up_blocks = nn.ModuleList(up_blocks)
 
+        self.out = nn.Conv2d(64, n_classes, kernel_size = 1, stride = 1)
+
+        

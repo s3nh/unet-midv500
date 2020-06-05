@@ -32,7 +32,7 @@ def main():
     list_images = [str(el) for el in list_images]
     samples = list(zip(list_images, list_masks))
     samples = [tuple(el) for el in samples]
-    optimizer = torch.optim.Adam(model.parameters(), lr = 1e-6)
+    optimizer = torch.optim.SGD(model.parameters(), lr = 1e-4, momentum = 0.99)
     scheduler = StepLR(optimizer, step_size = 30, gamma = 0.1) 
     train_model(model = model, optimizer = optimizer, scheduler = scheduler, num_epochs = 200, samples = samples)
 
