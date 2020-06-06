@@ -6,6 +6,7 @@ import typing
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from torch.optim import Adam
+from models.resnet18_unet import ResNetUNet
 from models.unet import UNet
 from src.dataset import MidvDataset
 from src.train import train_model
@@ -23,7 +24,7 @@ def main():
     torch.cuda.empty_cache()
 
     device = 'cuda'
-    model = UNet(n_class = 1)
+    model = ResNetUNet(n_class = 1)
     model = model.cuda()
    
     list_images = list(Path('data_processed/images').rglob('*.jpg'))
