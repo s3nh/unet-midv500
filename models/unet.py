@@ -81,8 +81,6 @@ class UNet(nn.Module):
 
         # Decoder part 
 
-
-
         x = self.upsample(x)
         x = torch.cat([x, conv3], dim = 1)
 
@@ -97,5 +95,4 @@ class UNet(nn.Module):
 
         x = self.uconv1(x)
         out = self.lconv(x)
-
         return out

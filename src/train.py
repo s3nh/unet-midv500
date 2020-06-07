@@ -20,25 +20,29 @@ import os
 import time
 
 def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
-    dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=224 , p=1)], p=1  ))
+    dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=512 , p=1)], p=1  ))
     train_dt, test_dt = torch.utils.data.random_split(dataset,[ int(0.8* len(dataset)), int(0.2* len(dataset))])
     train_loader = DataLoader(train_dt,  batch_size = 4, shuffle = True, num_workers = 0)
     test_loader = DataLoader(test_dt, shuffle = True, batch_size = 4)
     model = model.cuda()
-    criterion =  JaccardLoss(mode ='binary') 
+    _act = nn.Sigmoid()
+    #criterion =  JaccardLoss(mode ='binary', from_logits = True) 
     #criterion = torch.nn.BCELoss().cuda()
+    criterion = nn.BCEWithLogitsLoss()
 
     for epoch in range(num_epochs):
+        model.train()
         for i, res in enumerate(train_loader, 0):
             inputs = res['features'].float().cuda()
             labels = res['masks'].float().cuda()
             optimizer.zero_grad()
             output = model(inputs)
+
             loss = criterion(output, labels)
             loss.backward()
             
             optimizer.step()
-            scheduler.step()
+            #scheduler.step()
 
             if i % 100 == 0:
                 print(f' loss values in epoch {epoch} iter {i} : {loss}')
