@@ -18,11 +18,12 @@ from torchsummary import summary
 from pytorch_toolbelt.losses import JaccardLoss, BinaryFocalLoss
 import os 
 import time
+import numpy as np 
 
 
 def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
     best_loss = 1.0
-    dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=768 , p=1)], p=1  ))
+    dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=128 , p=1)], p=1  ))
     train_dt, test_dt = torch.utils.data.random_split(dataset,[ int(0.8* len(dataset)), int(0.2* len(dataset))])
     train_loader = DataLoader(train_dt,  batch_size = 1, shuffle = True, num_workers = 0)
     test_loader = DataLoader(test_dt, shuffle = True, batch_size = 1)
@@ -31,7 +32,7 @@ def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
     #criterion =  JaccardLoss(mode ='binary', from_logits = True) 
     #criterion = torch.nn.BCELoss().cuda()
     criterion = nn.BCEWithLogitsLoss()
-
+    val_loss = []
     for epoch in range(num_epochs):
         model.train()
         for i, res in enumerate(train_loader, 0):
@@ -54,15 +55,15 @@ def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
             t_labels = t_res['masks'].to(device = 'cuda', dtype = torch.float32)
             with torch.no_grad():
                 val_pred = model(t_inputs)
-            val_loss = criterion(val_pred, t_labels)
-
-            scheduler.step(val_loss)
+            v_loss = criterion(val_pred, t_labels)
+            val_loss.append(v_loss)
+        v_loss_mean = np.sum(val_loss)/len(val_loss)
+        scheduler.step(v_loss_mean)
            
-        # print validation statistics %a
 
-        print(f' Epoch {epoch} Validation loss {val_loss}')
+        print(f' Epoch {epoch} Validation loss {v_loss_mean}')
 
-        if val_loss < best_loss:
+        if v_loss_mean < best_loss:
             save_path = os.path.join('trained_model', f'unet_best_{epoch}.pt') 
             torch.save({
                     'epoch' : epoch, 
@@ -70,8 +71,8 @@ def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
                     'optimizer_state_dict' : optimizer.state_dict(), 
                     'scheduler_state_dict' : scheduler.state_dict(), 
                     'loss' : loss, 
-                    'val_loss' : val_loss},
+                    'val_loss' : v_loss_mean},
                     save_path 
                 )
-            best_loss = val_loss
+            best_loss = v_loss_mean
     return model 
