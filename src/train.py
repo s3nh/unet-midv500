@@ -19,7 +19,9 @@ from pytorch_toolbelt.losses import JaccardLoss, BinaryFocalLoss
 import os 
 import time
 
+
 def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
+    best_loss = 1.0
     dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=768 , p=1)], p=1  ))
     train_dt, test_dt = torch.utils.data.random_split(dataset,[ int(0.8* len(dataset)), int(0.2* len(dataset))])
     train_loader = DataLoader(train_dt,  batch_size = 1, shuffle = True, num_workers = 0)
@@ -49,7 +51,7 @@ def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
 
         for t_i, t_res in enumerate(test_loader, 0):
             t_inputs = t_res['features'].to(device = 'cuda', dtype = torch.float32)
-            t_labels = t_res['features'].to(device = 'cuda', dtype = torch.float32)
+            t_labels = t_res['masks'].to(device = 'cuda', dtype = torch.float32)
             with torch.no_grad():
                 val_pred = model(t_inputs)
             val_loss = criterion(val_pred, t_labels)
@@ -60,14 +62,16 @@ def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
 
         print(f' Epoch {epoch} Validation loss {val_loss}')
 
-        if epoch % 5 == 0:
-            save_path = os.path.join('trained_model', f'unet_midv_adam_{epoch}.pt') 
+        if val_loss < best_loss:
+            save_path = os.path.join('trained_model', f'unet_best_{epoch}.pt') 
             torch.save({
                     'epoch' : epoch, 
                     'model_state_dict' : model.state_dict(), 
                     'optimizer_state_dict' : optimizer.state_dict(), 
                     'scheduler_state_dict' : scheduler.state_dict(), 
-                    'loss' : loss},
+                    'loss' : loss, 
+                    'val_loss' : val_loss},
                     save_path 
                 )
+            best_loss = val_loss
     return model 
