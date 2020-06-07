@@ -20,10 +20,10 @@ import os
 import time
 
 def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
-    dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=512 , p=1)], p=1  ))
+    dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=768 , p=1)], p=1  ))
     train_dt, test_dt = torch.utils.data.random_split(dataset,[ int(0.8* len(dataset)), int(0.2* len(dataset))])
-    train_loader = DataLoader(train_dt,  batch_size = 4, shuffle = True, num_workers = 0)
-    test_loader = DataLoader(test_dt, shuffle = True, batch_size = 4)
+    train_loader = DataLoader(train_dt,  batch_size = 1, shuffle = True, num_workers = 0)
+    test_loader = DataLoader(test_dt, shuffle = True, batch_size = 1)
     model = model.cuda()
     _act = nn.Sigmoid()
     #criterion =  JaccardLoss(mode ='binary', from_logits = True) 
@@ -33,20 +33,33 @@ def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
     for epoch in range(num_epochs):
         model.train()
         for i, res in enumerate(train_loader, 0):
-            inputs = res['features'].float().cuda()
-            labels = res['masks'].float().cuda()
-            optimizer.zero_grad()
+            inputs = res['features'].to(device = 'cuda', dtype = torch.float32)
+            labels = res['masks'].to(device = 'cuda', dtype = torch.float32)
             output = model(inputs)
+            loss = criterion(output, labels) 
 
-            loss = criterion(output, labels)
+            optimizer.zero_grad()
             loss.backward()
-            
             optimizer.step()
-            #scheduler.step()
-
+            
             if i % 100 == 0:
-                print(f' loss values in epoch {epoch} iter {i} : {loss}')
-        print(f" Loss functions after {epoch} : {loss}")
+                print(f'loss {loss}')
+
+        model.eval()
+
+        for t_i, t_res in enumerate(test_loader, 0):
+            t_inputs = t_res['features'].to(device = 'cuda', dtype = torch.float32)
+            t_labels = t_res['features'].to(device = 'cuda', dtype = torch.float32)
+            with torch.no_grad():
+                val_pred = model(t_inputs)
+            val_loss = criterion(val_pred, t_labels)
+
+            scheduler.step(val_loss)
+           
+        # print validation statistics %a
+
+        print(f' Epoch {epoch} Validation loss {val_loss}')
+
         if epoch % 5 == 0:
             save_path = os.path.join('trained_model', f'unet_midv_adam_{epoch}.pt') 
             torch.save({
@@ -56,6 +69,5 @@ def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
                     'scheduler_state_dict' : scheduler.state_dict(), 
                     'loss' : loss},
                     save_path 
-                    
                 )
     return model 

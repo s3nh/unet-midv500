@@ -28,8 +28,8 @@ def main():
     #model = ResNetUNet(n_class = 1)
     model = model.cuda()
    
-    list_images = list(Path('data_processed/images').rglob('*.jpg'))
-    list_masks = list(Path('data_processed/labels').rglob('*.png'))
+    list_images = sorted(list(Path('data_processed/images').rglob('*.jpg')))
+    list_masks = sorted(list(Path('data_processed/labels').rglob('*.png')))
     list_masks = [str(el) for el in list_masks]
     list_images = [str(el) for el in list_images]
     samples = list(zip(list_images, list_masks))
