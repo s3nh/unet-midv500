@@ -23,7 +23,7 @@ import numpy as np
 
 def train_model(model , optimizer, scheduler , num_epochs, samples) -> None:
     best_loss = 1.0
-    dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=128 , p=1)], p=1  ))
+    dataset = MidvDataset(samples = samples, transform = albumentations.Compose( [albumentations.LongestMaxSize(max_size=768 , p=1)], p=1  ))
     train_dt, test_dt = torch.utils.data.random_split(dataset,[ int(0.8* len(dataset)), int(0.2* len(dataset))])
     train_loader = DataLoader(train_dt,  batch_size = 1, shuffle = True, num_workers = 0)
     test_loader = DataLoader(test_dt, shuffle = True, batch_size = 1)
