@@ -1,3 +1,4 @@
+import os 
 import torch.nn as nn 
 import torch.nn.init as init 
 from src.unet import UNet
@@ -5,10 +6,13 @@ from src.unet import UNet
 
 
 def main():
-    
-    torch.onnx.export(model, 
+    os.makedirs('exported', exist_ok = True)
+    torch_model = '../trained_models/unet_best_9.pt'
+    x = torch.randn(4, 1, 768, 768, requires_grad = True) 
+    torch_out = torch_model(x)
+    torch.onnx.export(torch_model, 
             x, 
-            'unet_midv.onnx', 
+            'unet_9.onnx', 
             export_params=True, 
             opset_version = 10, 
             do_constant_folding = True, 
