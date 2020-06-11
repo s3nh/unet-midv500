@@ -2,3 +2,4 @@
 /data/
 /data_processed/
 /trained_model/
+!/trained_model/unet_best_9.pt
